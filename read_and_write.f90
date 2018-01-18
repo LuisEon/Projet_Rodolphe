@@ -200,29 +200,49 @@ CONTAINS
 
   End subroutine
 
-  subroutine write_file(name_file,U_total,X,Y,Nx,Ny,l)
+  subroutine write_file(name_file,U_total,X,Y,Nx,Ny,gamma,l)
 
     Implicit none
 
-    character*6, intent(in) :: name_file
+    character*13, intent(in) :: name_file
     integer, intent(in) :: l,Nx,Ny
+    double precision, intent(in) :: gamma
     double precision, dimension(:), intent(in) :: X,Y
-    double precision, dimension(:,:), intent(in) :: U_total
-    integer :: i,j,k
+    double precision, dimension(:,:,:), intent(in) :: U_total
+    integer :: i,j
+    double precision :: p
 
-    ! if (l==1) then
-    !   Open (unit=4,file=name_file//"pressure.dat",action="write",status="unknown")
-    !
-    !   write (unit=4,fmt=*) "# X, Y, P"
-    !   Do i=1,Nx+1
-    !     Do j=1,Ny+1
-    !       k=(j-1)*Nx+i ! Indice global dans le maillage cartésien
-    !       write (unit=4,fmt=*) X(i), Y(j), U_total(k,l)
-    !     End Do
-    !   End Do
-    !
-    !   Close(4)
-    ! end if
+    if (l==1) then
+      Open (unit=5,file=name_file//"pressure.vtk",action="write",status="unknown")
+
+      write (unit=5,fmt='(A)') "# vtk DataFile Version 2.0"
+      write (unit=5,fmt='(A)') "Pressure"
+      write (unit=5,fmt='(A)') "ASCII"
+      write (unit=5,fmt='(A)') "DATASET RECTILINEAR_GRID"
+      write (unit=5,fmt='(A,X,I4,X,I4,X,I1)') "DIMENSIONS", Nx+1, Ny+1, 1
+      write (unit=5,fmt='(A,X,I4,X,A)') "X_COORDINATES", Nx+1, "double"
+      Do i=1,Nx+1
+        write (unit=5,fmt='(F16.14,X)',advance='no') X(i)
+      End Do
+      write(unit=5,fmt='(A)'), " "
+      write (unit=5,fmt='(A,X,I4,X,A)') "Y_COORDINATES", Ny+1, "double"
+      Do j=1,Ny+1
+        write (unit=5,fmt='(F16.14,X)',advance='no') Y(j)
+      end do
+      write(unit=5,fmt='(A)'), " "
+      write (unit=5,fmt='(A,X,I1,X,A)') "Z_COORDINATES", 1, "double"
+      write (unit=5,fmt='(F2.0)') 0.
+      write (unit=5,fmt='(A,X,I7)') "CELL_DATA", Nx*Ny
+      write (unit=5,fmt='(A,X,A,X,A,X,I1)') "SCALARS", "Pressure", "double", 1
+      write (unit=5,fmt='(A,X,A)') "LOOKUP_TABLE", "default"
+      Do j=1,Ny
+        Do i=1,Nx
+          p = (gamma-1)*(U_total(i,j,4)-((U_total(i,j,2)**2)+(U_total(i,j,3)**2))/(2*U_total(i,j,1)))
+          write (unit=5,fmt='(F16.10,X)') p
+        end do
+      end do
+      Close(5)
+    end if
 
     if (l==2) then
       Open (unit=5,file=name_file//"density.vtk",action="write",status="unknown")
@@ -247,56 +267,45 @@ CONTAINS
       write (unit=5,fmt='(A,X,I7)') "CELL_DATA", Nx*Ny
       write (unit=5,fmt='(A,X,A,X,A,X,I1)') "SCALARS", "Density", "double", 1
       write (unit=5,fmt='(A,X,A)') "LOOKUP_TABLE", "default"
-      Do i=1,Nx
-        Do j=1,Ny
-          k=(j-1)*Nx+i ! Indice global dans le maillage cartésien
-          write (unit=5,fmt='(F16.14,X)') U_total(k,l)
+      Do j=1,Ny
+        Do i=1,Nx
+          write (unit=5,fmt='(F16.10,X)') U_total(i,j,1)
         end do
       end do
       Close(5)
     end if
 
     if (l==3) then
-      Open (unit=5,file=name_file//"velocity_u.vtk",action="write",status="unknown")
+      Open (unit=5,file=name_file//"velocity.vtk",action="write",status="unknown")
 
       write (unit=5,fmt='(A)') "# vtk DataFile Version 2.0"
-      write (unit=5,fmt='(A)') "Velocity_U"
+      write (unit=5,fmt='(A)') "Velocity"
       write (unit=5,fmt='(A)') "ASCII"
-      write (unit=5,fmt='(A)') "DATASET STRUCTURED_GRID"
+      write (unit=5,fmt='(A)') "DATASET RECTILINEAR_GRID"
       write (unit=5,fmt='(A,X,I4,X,I4,X,I1)') "DIMENSIONS", Nx+1, Ny+1, 1
-      write (unit=5,fmt='(A,X,I7,X,A)') "POINTS", (Nx+1)*(Ny+1), "double"
+      write (unit=5,fmt='(A,X,I4,X,A)') "X_COORDINATES", Nx+1, "double"
       Do i=1,Nx+1
-        Do j=1,Ny+1
-          write (unit=5,fmt='(F16.14,X,F16.14,X,F2.0)') X(i), Y(j), 0.
-        End do
-      End do
+        write (unit=5,fmt='(F16.14,X)',advance='no') X(i)
+      End Do
+      write(unit=5,fmt='(A)'), " "
+      write (unit=5,fmt='(A,X,I4,X,A)') "Y_COORDINATES", Ny+1, "double"
+      Do j=1,Ny+1
+        write (unit=5,fmt='(F16.14,X)',advance='no') Y(j)
+      end do
+      write(unit=5,fmt='(A)'), " "
+      write (unit=5,fmt='(A,X,I1,X,A)') "Z_COORDINATES", 1, "double"
+      write (unit=5,fmt='(F2.0)') 0.
       write (unit=5,fmt='(A,X,I7)') "CELL_DATA", Nx*Ny
-      write (unit=5,fmt='(A,X,A,X,A,X,I1)') "SCALARS", "Velocity_U", "double", 1
-      write (unit=5,fmt='(A,X,A)') "LOOKUP_TABLE", "default"
-      Do i=1,Nx
-        Do j=1,Ny
-          k=(j-1)*Nx+i ! Indice global dans le maillage cartésien
-          write (unit=5,fmt='(F16.14,X)') U_total(k,l)
+      write (unit=5,fmt='(A,X,A,X,A,X,I1)') "VECTORS", "Velocity", "double"
+      Do j=1,Ny
+        Do i=1,Nx
+          write (unit=5,fmt='(F16.10,X,F16.10,X,F16.10)') U_total(i,j,2)/U_total(i,j,1), U_total(i,j,3)/U_total(i,j,1), 0.
         end do
       end do
       Close(5)
     end if
 
-    ! if (l==4) then
-    !   Open (unit=7,file=name_file//"velocity_y.dat",action="write",status="unknown")
-    !
-    !   write (unit=7,fmt=*) "# X, Y, V"
-    !   Do i=1,Nx
-    !     Do j=1,Ny
-    !       k=(j-1)*Nx+i ! Indice global dans le maillage cartésien
-    !       write (unit=7,fmt=*) X(i), Y(j), U_total(k,l)
-    !     End Do
-    !   End Do
-    !
-    !   Close(7)
-    ! end if
-
-    if ((l>4) .or. (l<1)) then
+    if ((l>3) .or. (l<1)) then
       print*, "MAUVAISE ECRITURE !!!"
     end if
 

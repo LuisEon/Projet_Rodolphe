@@ -13,14 +13,14 @@ CONTAINS
     double precision, intent(in) :: gamma
     double precision, dimension(4), intent(in) :: U
     double precision, dimension(4) :: res
-    double precision :: E
+    double precision :: p
 
-    E = U(1)/(gamma-1) + U(2)*(U(3)**2+U(4)**2)/2
+    p = (gamma-1)*(U(4)-((U(2)**2)+(U(3)**2))/(2*U(1)))
 
-    res(1) = U(2)*U(3)
-    res(2) = U(2)*U(3)**2 + U(1)
-    res(3) = U(2)*U(3)*U(4)
-    res(4) = U(3)*(E+U(1))
+    res(1) = U(2)
+    res(2) = ((U(2)**2)/U(1))+p
+    res(3) = (U(2)*U(3))/U(1)
+    res(4) = (U(2)/U(1))*(U(4)+p)
 
   end function Fx
 
@@ -33,115 +33,157 @@ CONTAINS
     double precision, intent(in) :: gamma
     double precision, dimension(4), intent(in) :: U
     double precision, dimension(4) :: res
-    double precision :: E
+    double precision :: p
 
-    E = U(1)/(gamma-1) + U(2)*(U(3)**2+U(4)**2)/2
+    p = (gamma-1)*(U(4)-((U(2)**2)+(U(3)**2))/(2*U(1)))
 
-    res(1) = U(2)*U(4)
-    res(2) = U(2)*U(4)**2 + U(1)
-    res(3) = U(2)*U(3)*U(4)
-    res(4) = U(4)*(E+U(1))
+    res(1) = U(3)
+    res(2) = (U(2)*U(3))/U(1)
+    res(3) = ((U(3)**2)/U(1))+p
+    res(4) = (U(3)/U(1))*(U(4)+p)
 
   end function Fy
 
-  subroutine Initialisation(U_total, X, Y, Nx, bmoins, bplus, gamma, p1, rho1, u1, v1, p2, rho2, u2, v2, &
+  subroutine Initialisation(U_total, X, Y, bmoins, bplus, gamma, p1, rho1, u1, v1, p2, rho2, u2, v2, &
     & p3, rho3, u3, v3, p4, rho4, u4, v4)
 
     Implicit none
 
-    integer, intent(in) :: Nx
     double precision, intent(in) :: gamma
-    double precision, dimension(:,:), intent(inout) :: U_total
+    double precision, dimension(:,:,:), intent(inout) :: U_total
     double precision, intent(in) :: p1, rho1, u1, v1, p2, rho2, u2, v2, p3, rho3, u3, v3, p4, rho4, u4, v4
     double precision, dimension(:), intent(in) :: X,Y
     double precision, dimension(2), intent(inout) :: bmoins, bplus
-    double precision :: c
-    integer :: i,j,k
+    double precision :: c, E1, E2, E3, E4
+    integer :: i,j
 
-    do i=1,size(X)-1
-      do j=1,size(Y)-1
-        k=(j-1)*Nx+i ! Indice global dans le maillage cartésien
+    ! Energies initiales
+    E1 = p1/(gamma-1) + rho1*((u1**2)+(v1**2))/2
+    E2 = p2/(gamma-1) + rho2*((u2**2)+(v2**2))/2
+    E3 = p3/(gamma-1) + rho3*((u3**2)+(v3**2))/2
+    E4 = p4/(gamma-1) + rho4*((u4**2)+(v4**2))/2
+
+
+    do j=1,size(Y)-1
+      do i=1,size(X)-1
         if ((X(i)>0.5) .and. (Y(j)>0.5)) then
-          ! print*, "HELLO 1 : X et Y =", X(i), Y(j)
           c = sqrt(gamma*p1/rho1)
           ! Définition des vitesses d'ondes initiales
-          bmoins(1) = u1-c-0.*u1
-          bmoins(2) = v1-c-0.*v1
-          bplus(1) = u1+c+0.*u1
-          bplus(2) = v1+c+0.*v1
-          ! print*, "HELLO 1 : k =", k
-          U_total(k,1) = p1
-          U_total(k,2) = rho1
-          U_total(k,3) = u1
-          U_total(k,4) = v1
+          bmoins(1) = u1-c
+          bmoins(2) = v1-c
+          bplus(1) = u1+c
+          bplus(2) = v1+c
+          ! Vecteur U initial dans la partie 1
+          U_total(i,j,1) = rho1
+          U_total(i,j,2) = rho1*u1
+          U_total(i,j,3) = rho1*v1
+          U_total(i,j,4) = E1
         end if
         if ((X(i)<=0.5) .and. (Y(j)>0.5)) then
-          ! print*, "HELLO 2 : X et Y =", X(i), Y(j)
           c = sqrt(gamma*p2/rho2)
           ! Définition des vitesses d'ondes initiales
-          bmoins(1) = u2-c-0.*u2
-          bmoins(2) = v2-c-0.*v2
-          bplus(1) = u2+c+0.*u2
-          bplus(2) = v2+c+0.*v2
-          ! print*, "HELLO 2 : k =", k
-          U_total(k,1) = p2
-          U_total(k,2) = rho2
-          U_total(k,3) = u2
-          U_total(k,4) = v2
+          bmoins(1) = u2-c
+          bmoins(2) = v2-c
+          bplus(1) = u2+c
+          bplus(2) = v2+c
+          ! Vecteur U initial dans la partie 2
+          U_total(i,j,1) = rho2
+          U_total(i,j,2) = rho2*u2
+          U_total(i,j,3) = rho2*v2
+          U_total(i,j,4) = E2
         end if
         if ((X(i)<=0.5) .and. (Y(j)<=0.5)) then
-          ! print*, "HELLO 3 : X et Y =", X(i), Y(j)
           c = sqrt(gamma*p3/rho3)
           ! Définition des vitesses d'ondes initiales
-          bmoins(1) = u3-c-0.*u3
-          bmoins(2) = v3-c-0.*v3
-          bplus(1) = u3+c+0.*u3
-          bplus(2) = v3+c+0.*v3
-          ! print*, "HELLO 3 : k =", k
-          U_total(k,1) = p3
-          U_total(k,2) = rho3
-          U_total(k,3) = u3
-          U_total(k,4) = v3
+          bmoins(1) = u3-c
+          bmoins(2) = v3-c
+          bplus(1) = u3+c
+          bplus(2) = v3+c
+          ! Vecteur U initial dans la partie 3
+          U_total(i,j,1) = rho3
+          U_total(i,j,2) = rho3*u3
+          U_total(i,j,3) = rho3*v3
+          U_total(i,j,4) = E3
         end if
         if ((X(i)>0.5) .and. (Y(j)<=0.5)) then
-          ! print*, "HELLO 4 : X et Y =", X(i), Y(j)
           c = sqrt(gamma*p4/rho4)
           ! Définition des vitesses d'ondes initiales
-          bmoins(1) = u4-c-0.*u4
-          bmoins(2) = v4-c-0.*v4
-          bplus(1) = u4+c+0.*u4
-          bplus(2) = v4+c+0.*v4
-          ! print*, "HELLO 4 : k =", k
-          U_total(k,1) = p4
-          U_total(k,2) = rho4
-          U_total(k,3) = u4
-          U_total(k,4) = v4
+          bmoins(1) = u4-c
+          bmoins(2) = v4-c
+          bplus(1) = u4+c
+          bplus(2) = v4+c
+          ! Vecteur U initial dans la partie 4
+          U_total(i,j,1) = rho4
+          U_total(i,j,2) = rho4*u4
+          U_total(i,j,3) = rho4*v4
+          U_total(i,j,4) = E4
         end if
       end do
     end do
 
   end subroutine Initialisation
 
-  subroutine Reload_waves(U_total,bplus,bmoins,gamma, Nx, i, j)
+  subroutine Reload_waves(U_total,bmoins,bplus,gamma, Nx, Ny)
 
     Implicit none
 
-    integer, intent(in) :: Nx,i,j
-    integer :: k
-    double precision :: c
+    integer, intent(in) :: Nx,Ny
+    double precision :: cm, cd, ch, pm, pd, ph
     double precision, intent(in) :: gamma
     double precision, dimension(2), intent(inout) :: bmoins, bplus
-    double precision, dimension(:,:), intent(in) :: U_total
+    double precision, dimension(:,:,:), intent(in) :: U_total
+    integer :: i,j
 
-    k = (j-1)*Nx+i ! Indice global dans le maillage cartésien
+    do j=1,Ny
+      do i=1,Nx
 
-    c = sqrt(gamma*U_total(k,1)/U_total(k,2))
+        ! Définition des vitesses d'ondes mises à jour
+        ! Choix de front d'onde isentropique
 
-    ! Définition des vitesses d'ondes mises à jour
-    bmoins(1) = U_total(k,3)-c-0.*U_total(k,3)
-    bmoins(2) = U_total(k,4)-c-0.*U_total(k,4)
-    bplus(1) = U_total(k,3)+c+0.*U_total(k,3)
-    bplus(2) = U_total(k,4)+c+0.*U_total(k,4)
+        if (j==1) then ! Si on est sur le bord du bas
+          pm = (gamma-1)*(U_total(i,j,4)-((U_total(i,j,2)**2)+(U_total(i,j,3)**2))/(2*U_total(i,j,1)))
+          ph = (gamma-1)*(U_total(i,j+1,4)-((U_total(i,j+1,2)**2)+(U_total(i,j+1,3)**2))/(2*U_total(i,j+1,1)))
+          cm = sqrt(gamma*pm/U_total(i,j,1))
+          ch = sqrt(gamma*ph/U_total(i,j+1,1))
+          bmoins(2) = min(0.,(U_total(i,j,3)/U_total(i,j,1))-cm)
+          bplus(2) = max(0.,(U_total(i,j+1,3)/U_total(i,j+1,1))+ch)
+        else if (j==Ny) then ! Si on est sur le bord du haut
+          pm = (gamma-1)*(U_total(i,j,4)-((U_total(i,j,2)**2)+(U_total(i,j,3)**2))/(2*U_total(i,j,1)))
+          cm = sqrt(gamma*pm/U_total(i,j,1))
+          bmoins(2) = min(0.,(U_total(i,j,3)/U_total(i,j,1))-cm)
+          bplus(2) = max(0.,(U_total(i,j,3)/U_total(i,j,1))+cm)
+        else ! Sinon
+          pm = (gamma-1)*(U_total(i,j,4)-((U_total(i,j,2)**2)+(U_total(i,j,3)**2))/(2*U_total(i,j,1)))
+          ph = (gamma-1)*(U_total(i,j+1,4)-((U_total(i,j+1,2)**2)+(U_total(i,j+1,3)**2))/(2*U_total(i,j+1,1)))
+          cm = sqrt(gamma*pm/U_total(i,j,1))
+          ch = sqrt(gamma*ph/U_total(i,j+1,1))
+          bmoins(2) = min(0.,(U_total(i,j,3)/U_total(i,j,1))-cm)
+          bplus(2) = max(0.,(U_total(i,j+1,3)/U_total(i,j+1,1))+ch)
+        end if
+
+        if (i==1) then ! Si on est sur le bord de gauche
+          pm = (gamma-1)*(U_total(i,j,4)-((U_total(i,j,2)**2)+(U_total(i,j,3)**2))/(2*U_total(i,j,1)))
+          pd = (gamma-1)*(U_total(i+1,j,4)-((U_total(i+1,j,2)**2)+(U_total(i+1,j,3)**2))/(2*U_total(i+1,j,1)))
+          cm = sqrt(gamma*pm/U_total(i,j,1))
+          cd = sqrt(gamma*pd/U_total(i+1,j,1))
+          bmoins(1) = min(0.,(U_total(i,j,2)/U_total(i,j,1))-cm)
+          bplus(1) = max(0.,(U_total(i+1,j,2)/U_total(i+1,j,1))+cd)
+        else if (i==Nx) then ! Si on est sur le bord de droite
+          pm = (gamma-1)*(U_total(i,j,4)-((U_total(i,j,2)**2)+(U_total(i,j,3)**2))/(2*U_total(i,j,1)))
+          cm = sqrt(gamma*pm/U_total(i,j,1))
+          bmoins(1) = min(0.,(U_total(i,j,2)/U_total(i,j,1))-cm)
+          bplus(1) = max(0.,(U_total(i,j,2)/U_total(i,j,1))+cm)
+        else ! Sinon
+          pm = (gamma-1)*(U_total(i,j,4)-((U_total(i,j,2)**2)+(U_total(i,j,3)**2))/(2*U_total(i,j,1)))
+          pd = (gamma-1)*(U_total(i+1,j,4)-((U_total(i+1,j,2)**2)+(U_total(i+1,j,3)**2))/(2*U_total(i+1,j,1)))
+          cm = sqrt(gamma*pm/U_total(i,j,1))
+          cd = sqrt(gamma*pd/U_total(i+1,j,1))
+          bmoins(1) = min(0.,(U_total(i,j,2)/U_total(i,j,1))-cm)
+          bplus(1) = max(0.,(U_total(i+1,j,2)/U_total(i+1,j,1))+cd)
+        end if
+
+      end do
+    end do
 
   end subroutine
 
