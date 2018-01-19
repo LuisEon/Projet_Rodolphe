@@ -4,7 +4,7 @@ USUAL_FLAG=-Wall
 DEBUG_FLAG=-fbounds-check
 
 PROG=run
-SRC=read_and_write.f90 tools.f90 HLL.f90 MOOD.f90 main.f90
+SRC=read_and_write.f90 HLL_tools.f90 HLLC_tools.f90 HLL.f90 HLLC.f90 MOOD.f90 main.f90
 
 usual:
 	$(F90) $(USUAL_FLAG) $(SRC) -o $(PROG)
